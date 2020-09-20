@@ -1,0 +1,1 @@
+nvcc gol.cu -o game-of-life

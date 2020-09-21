@@ -5,6 +5,8 @@
 
 #include <iostream>
 #include <tuple>
+#include <random>
+#include <functional>
 
 __global__ void cuda_hello(){
     printf("Hello World from GPU!\n");
@@ -83,6 +85,7 @@ int main( int argc, char* argv[] ) {
         case 'r':
             isRandom = true;
             seed = atoi(optarg);
+            std::cout << "Using random seed: " << seed << std::endl;
             break;
         
         case 's':
@@ -90,10 +93,8 @@ int main( int argc, char* argv[] ) {
             break;
 
         default: /* '?' */
-        show_usage( argv[0] );
-        exit( EXIT_FAILURE );
-        break;
-
+            show_usage( argv[0] );
+            exit( EXIT_FAILURE );
         }
     }
 
@@ -111,13 +112,13 @@ int main( int argc, char* argv[] ) {
     }
 
     if ( isRandom ) {
-        if ( seed == 0 ) {
-            srand( time( NULL ) ); // Set random seed
+        auto gen = std::bind(   std::uniform_int_distribution<>( 0,1 ),
+                                std::default_random_engine() );
+        for ( int y = 0; y < size[1]; y++ ) {    
+            for ( int x = 0; x < size[0]; x++ ) {
+                grid[y][x] = gen();
+            }
         }
-        else {
-            srand( seed );
-        }
-        
     }
 
     printGrid( grid, size );

@@ -6,8 +6,6 @@
 #include <iostream>
 #include <tuple>
 
-using namespace std;
-
 __global__ void cuda_hello(){
     printf("Hello World from GPU!\n");
 }
@@ -16,7 +14,7 @@ __global__ void cuda_hello(){
 Clears screen and moves cursor to home pos on POSIX systems
 */
 void clear() {
-    cout << "\033[2J;" << "\033[1;1H";
+    std::cout << "\033[2J;" << "\033[1;1H";
 }
 
 /*
@@ -25,13 +23,13 @@ void printGrid( bool** grid, int* size ) {
     for ( int y = 0; y < size[1]; y++ ) {
         for ( int x = 0; x < size[0]; x++ ) {
             if ( grid[y][x] == true ) {
-                cout << "0";
+                std::cout << "0";
             }
             else {
-                cout << ".";
+                std::cout << ".";
             }
         }
-        cout << endl;
+        std::cout << std::endl;
     }
 }
 
@@ -57,6 +55,10 @@ int main( int argc, char* argv[] ) {
     int steps;
     int size[2] = {10, 10};
 
+    bool** grid;
+    bool** d_in;        // The read-only input array for kernel
+    bool** d_out;       // The write-only output for kernel
+
     if ( argc < 2 ) {
         show_usage( argv[0] );
         exit( EXIT_FAILURE );
@@ -72,31 +74,39 @@ int main( int argc, char* argv[] ) {
 
         case 'i':
             input = optarg;
+            break;
         
         case 'o':
             output = optarg;
+            break;
 
         case 'r':
             isRandom = true;
             seed = atoi(optarg);
+            break;
         
         case 's':
             steps = atoi(optarg);
+            break;
 
         default: /* '?' */
         show_usage( argv[0] );
         exit( EXIT_FAILURE );
+        break;
 
         }
     }
 
-    // Init empty grid
-    bool** grid = (bool**) malloc( size[1] * sizeof(bool*) );
+    // Init empty grids on both host and device
+    grid = (bool**) malloc( size[1] * sizeof(bool*) );
+    cudaMalloc( &d_in, size[1] * size[0] * sizeof(bool*) );
+    cudaMalloc( &d_out, size[1] * size[0] * sizeof(bool*) );
+
     for ( int y = 0; y < size[1]; y++ ) {
         grid[y] = (bool*) malloc( size[0] * sizeof(bool) );
 
         for ( int x = 0; x < size[0]; x++ ) {
-            grid[y][x] = false;
+            grid[y][x] = false; // Init host grid to empty
         }
     }
 
@@ -118,9 +128,11 @@ int main( int argc, char* argv[] ) {
 
     // Clean up memory allocations
     for ( int y = 0; y < size[1]; y++ ) {
-        free(grid[y]);
+        free( grid[y] );
     }
     free(grid);
+    cudaFree( d_in );
+    cudaFree( d_out );
 
     exit( EXIT_SUCCESS );
 }

@@ -8,8 +8,37 @@
 
 using namespace std;
 
-__global__ void cuda_hello(){
-    printf("Hello World from GPU!\n");
+__device__ int getNeighbourCount( bool** input, int x, int y, int* size ) {
+    int count = 0;
+
+    if ( ( x - 1 ) < 0 ) {
+        if ( input[y][ size[1] ] ) { count++; }
+    } else {
+        if ( input[y][x - 1] ) { count++; }
+    }
+    if ( ( x + 1 ) >= size[1] ) {
+        if ( input[y][0] ) { count++; }
+    } else {
+        if ( input[y][x + 1] ) { count++; }
+    }
+    if ( ( y - 1 ) < 0 ) {
+        if ( input[ size[0] ][x] ) { count++; }
+    } else {
+        if ( input[y - 1][x] ) { count++; }
+    }
+    if ( ( x + 1 ) >= size[1] ) {
+        if ( input[0][x] ) { count++; }
+    } else {
+        if ( input[y + 1][x] ) { count++; }
+    }
+    return count;
+}
+
+__global__ void simulate( bool* input, bool** output, int* size, int steps ) {
+
+    int index = threadIdx.x;
+    int stride = blockDim.x;
+
 }
 
 /*
@@ -112,7 +141,7 @@ int main( int argc, char* argv[] ) {
 
     printGrid( grid, size );
 
-    cuda_hello<<<1,1>>>();
+    simulate<<<1,1>>>();
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
 

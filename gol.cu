@@ -8,6 +8,10 @@
 #include <random>
 #include <functional>
 
+__device__ bool getCell( bool* input, int index ) {
+    return input[ index ];
+}
+
 __device__ int getNeighbourCount( bool** input, int x, int y, int* size ) {
     int count = 0;
 
@@ -38,6 +42,14 @@ __global__ void simulate( bool* input, bool* output, int* size, int steps ) {
 
     int index = threadIdx.x;
     int stride = blockDim.x;
+
+    if ( input[ index ] ) {
+        // Cell is alive
+
+    } else {
+        // Cell is dead
+        if ( getNeighbourCount( input, size ))
+    }
 
 }
 

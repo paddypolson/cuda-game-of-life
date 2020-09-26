@@ -25,7 +25,7 @@ __device__ int getNeighbourCount( bool* input, int x, int y, int* size ) {
     return count;
 }
 
-__global__ void simulate( bool* input, bool** output, int* size, int steps ) {
+__global__ void simulate( bool* input, bool* output, int* size, int steps ) {
 
     int index = threadIdx.x;
     int stride = blockDim.x;
@@ -41,10 +41,10 @@ void clear() {
 
 /*
 */
-void printGrid( bool** grid, int* size ) {
+void printGrid( bool* grid, int* size ) {
     for ( int y = 0; y < size[1]; y++ ) {
         for ( int x = 0; x < size[0]; x++ ) {
-            if ( grid[y][x] == true ) {
+            if ( grid[ y * size[1] + x ] == true ) {
                 std::cout << "0";
             }
             else {
@@ -74,12 +74,12 @@ int main( int argc, char* argv[] ) {
     char* output;
     bool isRandom = false;
     int seed;
-    int steps;
+    int steps = 0;
     int size[2] = {10, 10};
 
-    bool** grid;
-    bool** d_in;        // The read-only input array for kernel
-    bool** d_out;       // The write-only output for kernel
+    bool* grid;
+    bool* d_in;        // The read-only input array for kernel
+    bool* d_out;       // The write-only output for kernel
 
     if ( argc < 2 ) {
         show_usage( argv[0] );
@@ -118,15 +118,13 @@ int main( int argc, char* argv[] ) {
     }
 
     // Init empty grid
-    grid = (bool**) malloc( size[1] * sizeof(bool*) );
+    grid = (bool*) malloc( size[1] * size[0] * sizeof(bool*) );
     cudaMalloc( &d_in, size[1] * size[0] * sizeof(bool*) );
     cudaMalloc( &d_out, size[1] * size[0] * sizeof(bool*) );
 
     for ( int y = 0; y < size[1]; y++ ) {
-        grid[y] = (bool*) malloc( size[0] * sizeof(bool) );
-
         for ( int x = 0; x < size[0]; x++ ) {
-            grid[y][x] = false; // Init host grid to empty
+            grid[ y * size[1] + x ] = false; // Init host grid to empty
         }
     }
 
@@ -135,21 +133,18 @@ int main( int argc, char* argv[] ) {
                                 std::default_random_engine() );
         for ( int y = 0; y < size[1]; y++ ) {    
             for ( int x = 0; x < size[0]; x++ ) {
-                grid[y][x] = gen();
+                grid[ y * size[1] + x ] = gen();
             }
         }
     }
 
     printGrid( grid, size );
 
-    simulate<<<1,1>>>();
+    simulate<<< 1, 1 >>>( d_in, d_out, size, steps );
     // Wait for GPU to finish before accessing on host
     cudaDeviceSynchronize();
 
     // Clean up memory allocations
-    for ( int y = 0; y < size[1]; y++ ) {
-        free( grid[y] );
-    }
     free( grid );
     cudaFree( d_in );
     cudaFree( d_out );

@@ -8,33 +8,20 @@
 #include <random>
 #include <functional>
 
-__device__ bool getCell( bool* input, int index ) {
-    return input[ index ];
+__device__ bool getCell( bool* input, int x, int y, int* size ) {
+    if ( x < 0 ) { x = x + size[1]; }
+    else if ( x >= size[1] ) { x = x - size[1]; }
+    if ( y < 0 ) { y = y + size[0]; }
+    else if ( y >= size[0] ) { y = y - size[0]; }
+    return input[ y * size[0] + x ];
 }
 
-__device__ int getNeighbourCount( bool** input, int x, int y, int* size ) {
+__device__ int getNeighbourCount( bool* input, int x, int y, int* size ) {
     int count = 0;
-
-    if ( ( x - 1 ) < 0 ) {
-        if ( input[y][ size[1] ] ) { count++; }
-    } else {
-        if ( input[y][x - 1] ) { count++; }
-    }
-    if ( ( x + 1 ) >= size[1] ) {
-        if ( input[y][0] ) { count++; }
-    } else {
-        if ( input[y][x + 1] ) { count++; }
-    }
-    if ( ( y - 1 ) < 0 ) {
-        if ( input[ size[0] ][x] ) { count++; }
-    } else {
-        if ( input[y - 1][x] ) { count++; }
-    }
-    if ( ( x + 1 ) >= size[1] ) {
-        if ( input[0][x] ) { count++; }
-    } else {
-        if ( input[y + 1][x] ) { count++; }
-    }
+    if ( getCell( input, x - 1, y, size )) { count++; }
+    if ( getCell( input, x + 1, y, size )) { count++; }
+    if ( getCell( input, x, y - 1, size )) { count++; }
+    if ( getCell( input, x, y + 1, size )) { count++; }
     return count;
 }
 

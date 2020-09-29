@@ -30,10 +30,14 @@ __device__ bool getCell( bool* input, int x, int y, int* size ) {
 
 __device__ int getNeighbourCount( bool* input, int x, int y, int* size ) {
     int count = 0;
-    if ( getCell( input, x - 1, y, size )) { count++; }
-    if ( getCell( input, x + 1, y, size )) { count++; }
-    if ( getCell( input, x, y - 1, size )) { count++; }
-    if ( getCell( input, x, y + 1, size )) { count++; }
+    if ( getCell( input, x - 1  , y - 1, size )) { count++; }
+    if ( getCell( input, x      , y - 1, size )) { count++; }
+    if ( getCell( input, x + 1  , y - 1, size )) { count++; }
+    if ( getCell( input, x - 1  , y, size )) { count++; }
+    if ( getCell( input, x + 1  , y, size )) { count++; }
+    if ( getCell( input, x - 1  , y + 1, size )) { count++; }
+    if ( getCell( input, x      , y + 1, size )) { count++; }
+    if ( getCell( input, x + 1  , y + 1, size )) { count++; }
     return count;
 }
 
@@ -51,7 +55,7 @@ __global__ void simulate( bool* input, bool* output, int width, int height, int 
     // Find X and Y
     int y = index / width;
     int x = index % width;
-    int size[2] = {height, width};
+    int size[2] = {width, height};
     //printf("X: %d, Y: %d\n", x, y);
 
     int count = getNeighbourCount( input, x, y, size );
@@ -109,7 +113,7 @@ static void show_usage(std::string name)
               << "\t-r, --random\t\tInstead start with a randomized starting state, provide a seed, 0 will set a random seed" << std::endl
               << "\t-o, --output\t\tOptionally save the final state as a file" << std::endl
               << "\t-s, --steps\t\tThe number of simulation step to take" << std::endl
-              << "\t-p, --play\t\ttOptionally play the simulation in the console" << std::endl
+              << "\t-p, --play\t\tOptionally play the simulation in the console" << std::endl
               << std::endl;
 }
 
@@ -119,12 +123,11 @@ int main( int argc, char* argv[] ) {
     char* input;
     char* output;
     bool isRandom = false;
-    std::ifstream infile;
     std::ofstream outfile;
     bool play = false;
     int seed;
     int steps = 0;
-    int size[2] = {20, 10};
+    int size[2] = {10, 10}; // x, y
     int width, height;
     int gridSize = size[1] * size[0] * sizeof(bool*);
 
@@ -195,10 +198,40 @@ int main( int argc, char* argv[] ) {
             }
         }
     } else {
-        std::ifstream infile("thefile.txt");
+        // File is assumed to have {width} {height} on the first line
+        std::ifstream infile( input );
+        std::string size_string;
+        std::string delimiter = " ";
+
+        // parsing string into two ints for width and height
+        std::getline( infile, size_string );
+        std::string str1 = size_string.substr( 0, size_string.find( delimiter ));
+        size_string.erase( 0, size_string.find( delimiter ) + delimiter.length() );
+        std::string str2 = size_string;
+
+        int width = stoi( str1 );
+        int height = stoi( str2 );
+
+        std::string line;
+        int count = 0; // current line count
+
+        while ( std::getline( infile, line )) {
+            for ( int x = 0; x < width; x++ ) {
+                if ( line[x] == '0' ) {
+                    grid[ count * width + x ] = true;
+                } else {
+                    grid[ count * width + x ] = false;
+                }
+            }
+            count++;
+        }
     }
 
-    printGrid( grid, size );
+    if ( play ) {
+        clear();
+        printGrid( grid, size );
+        sleep( 1 );
+    }
 
     gpuErrchk( cudaMemcpy ( d_in, grid, gridSize, cudaMemcpyHostToDevice ) );
 
